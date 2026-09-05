@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comment Triage Bot | AI Content Engine</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="/static/style.css?v=2">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#f5f3ff',
+              100: '#ede9fe',
+              500: '#8b5cf6',
+              600: '#7c3aed',
+              700: '#6d28d9',
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-[#0b0f17] text-slate-100 min-h-screen font-sans selection:bg-purple-500 selection:text-white">
+
+  <!-- Navigation Bar -->
+  <header class="border-b border-slate-800/80 bg-[#0d131f]/90 backdrop-blur sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-purple-500/20 text-white">
+          <i data-lucide="bot" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="font-bold text-lg text-white tracking-tight">Comment Triage Bot</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 font-medium border border-purple-500/20">AI Engine</span>
+          </div>
+          <p class="text-xs text-slate-400">Intelligent YouTube comment triaging & style-matched drafting</p>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-3">
+        <!-- Export Dropdown -->
+        <div class="relative inline-block text-left">
+          <button id="btnExportToggle" onclick="toggleExportMenu()" class="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 transition">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+            <span>Export</span>
+            <i data-lucide="chevron-down" class="w-3 h-3"></i>
+          </button>
+          <div id="exportMenu" class="hidden absolute right-0 mt-2 w-36 rounded-lg bg-slate-900 border border-slate-800 shadow-xl py-1 z-50">
+            <a href="/api/export?format=csv" class="flex items-center px-4 py-2 text-xs text-slate-300 hover:bg-slate-800 hover:text-white">
+              <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5 mr-2 text-green-400"></i> CSV Spreadsheet
+            </a>
+            <a href="/api/export?format=json" class="flex items-center px-4 py-2 text-xs text-slate-300 hover:bg-slate-800 hover:text-white">
+              <i data-lucide="file-code" class="w-3.5 h-3.5 mr-2 text-indigo-400"></i> JSON Payload
+            </a>
+          </div>
+        </div>
+
+        <!-- Creator Voice & Settings Button -->
+        <button onclick="openSettingsModal()" class="inline-flex items-center space-x-1.5 px-3.5 py-1.5 text-xs font-medium rounded-lg bg-purple-600 hover:bg-purple-500 text-white transition shadow-sm shadow-purple-600/30">
+          <i data-lucide="sliders" class="w-3.5 h-3.5"></i>
+          <span>Creator Voice & Keys</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+    <!-- Hero Ingestion Section -->
+    <section class="rounded-2xl bg-gradient-to-b from-slate-900 to-slate-900/60 border border-slate-800 p-6 shadow-xl relative overflow-hidden">
+      <div class="absolute -right-24 -top-24 w-72 h-72 bg-purple-600/10 rounded-full blur-3xl pointer-events-none"></div>
+
+      <div class="max-w-3xl space-y-4">
+        <div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Triage Your Comments in Seconds</h1>
+          <p class="text-sm text-slate-400 mt-1">Paste any YouTube video link or select a live demo dataset to classify comments, score priority, and draft replies in your voice.</p>
+        </div>
+
+        <!-- Ingestion Bar Form -->
+        <form id="triageForm" onsubmit="handleAnalyze(event)" class="space-y-3">
+          <div class="flex flex-col sm:flex-row gap-2">
+            <div class="relative flex-1">
+              <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                <i data-lucide="youtube" class="w-5 h-5 text-red-500"></i>
+              </div>
+              <input
+                type="text"
+                id="videoUrlInput"
+                placeholder="https://www.youtube.com/watch?v=... or demo ID"
+                value="demo-ai-agent"
+                class="w-full pl-11 pr-4 py-3 bg-slate-950/80 border border-slate-700/80 rounded-xl text-slate-100 placeholder-slate-500 text-sm focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition font-mono"
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              id="analyzeBtn"
+              class="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-sm font-semibold rounded-xl flex items-center justify-center space-x-2 shadow-lg shadow-purple-600/25 transition disabled:opacity-50"
+            >
+              <i data-lucide="sparkles" class="w-4 h-4"></i>
+              <span>Analyze & Triage</span>
+            </button>
+          </div>
+
+          <!-- Quick 1-Click Demo Pickers -->
+          <div class="flex flex-wrap items-center gap-2 pt-1 text-xs">
+            <span class="text-slate-500 font-medium">⚡ Quick Demo Presets:</span>
+            <button type="button" onclick="loadSampleVideo('demo-ai-agent')" class="px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 transition">
+              🤖 AI Agent Tutorial (15 comments)
+            </button>
+            <button type="button" onclick="loadSampleVideo('demo-tech-review')" class="px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 transition">
+              💻 M4 MacBook Pro Review (6 comments)
+            </button>
+          </div>
+        </form>
+
+        <!-- Progress / Status Indicator Bar -->
+        <div id="statusIndicator" class="hidden rounded-xl bg-slate-950/60 border border-purple-500/30 p-4 space-y-2">
+          <div class="flex items-center justify-between text-xs">
+            <span id="statusText" class="text-purple-300 font-medium flex items-center space-x-2">
+              <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-purple-400 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+              </svg>
+              <span>Processing comments...</span>
+            </span>
+            <span id="statusPercent" class="text-slate-400 font-mono">0%</span>
+          </div>
+          <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+            <div id="progressBar" class="bg-gradient-to-r from-purple-500 to-indigo-500 h-1.5 rounded-full transition-all duration-300" style="width: 15%"></div>
+          </div>
+        </div>
+
+        <!-- Fallback Notice Banner -->
+        <div id="fallbackBanner" class="hidden rounded-xl bg-amber-950/40 border border-amber-500/40 p-4 text-xs text-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+          <div class="flex items-center space-x-2.5">
+            <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-400 flex-shrink-0"></i>
+            <div>
+              <span class="font-semibold block text-amber-100">Showing Demo Comments as Fallback</span>
+              <span id="fallbackBannerText" class="text-amber-300/80 text-[11px]">To fetch live comments from your real YouTube link, enter your free YouTube Data API key.</span>
+            </div>
+          </div>
+          <button onclick="openSettingsModal()" class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs whitespace-nowrap transition">
+            Add YouTube API Key
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Video Metadata Card (Shows active video info) -->
+    <div id="videoMetaCard" class="hidden rounded-xl bg-slate-900/60 border border-slate-800 p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div class="flex items-center space-x-4">
+        <img id="videoThumb" src="" alt="Thumbnail" class="w-24 h-14 object-cover rounded-lg border border-slate-800 shadow-md">
+        <div>
+          <h2 id="videoTitle" class="text-sm font-semibold text-white line-clamp-1">Video Title</h2>
+          <p id="videoChannel" class="text-xs text-slate-400 mt-0.5">Channel Name</p>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-6 text-xs text-slate-400 font-mono">
+        <div><span class="text-slate-500 block">Views</span> <span id="metaViews" class="text-slate-200 font-semibold text-sm">0</span></div>
+        <div><span class="text-slate-500 block">Likes</span> <span id="metaLikes" class="text-slate-200 font-semibold text-sm">0</span></div>
+        <div><span class="text-slate-500 block">Comments</span> <span id="metaComments" class="text-slate-200 font-semibold text-sm">0</span></div>
+      </div>
+    </div>
+
+    <!-- KPI Metrics Dashboard -->
+    <section id="metricsBar" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-3.5">
+        <span class="text-slate-400 text-xs flex items-center justify-between">
+          <span>Total Comments</span>
+          <i data-lucide="message-square" class="w-3.5 h-3.5 text-slate-500"></i>
+        </span>
+        <div id="metricTotal" class="text-2xl font-bold text-white mt-1">0</div>
+        <span class="text-[11px] text-slate-500">Ingested batch</span>
+      </div>
+
+      <div class="bg-slate-900/70 border border-purple-500/30 bg-purple-950/10 rounded-xl p-3.5">
+        <span class="text-purple-300 text-xs flex items-center justify-between font-medium">
+          <span>Needs Reply</span>
+          <i data-lucide="flame" class="w-3.5 h-3.5 text-purple-400"></i>
+        </span>
+        <div id="metricNeedsReply" class="text-2xl font-bold text-purple-200 mt-1">0</div>
+        <span class="text-[11px] text-purple-400/80">Actionable priority</span>
+      </div>
+
+      <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-3.5">
+        <span class="text-blue-300 text-xs flex items-center justify-between">
+          <span>Questions</span>
+          <i data-lucide="help-circle" class="w-3.5 h-3.5 text-blue-400"></i>
+        </span>
+        <div id="metricQuestions" class="text-2xl font-bold text-blue-100 mt-1">0</div>
+        <span class="text-[11px] text-slate-500">Community queries</span>
+      </div>
+
+      <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-3.5">
+        <span class="text-amber-300 text-xs flex items-center justify-between">
+          <span>Sponsor Pitches</span>
+          <i data-lucide="briefcase" class="w-3.5 h-3.5 text-amber-400"></i>
+        </span>
+        <div id="metricSponsors" class="text-2xl font-bold text-amber-100 mt-1">0</div>
+        <span class="text-[11px] text-slate-500">Commercial leads</span>
+      </div>
+
+      <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-3.5">
+        <span class="text-rose-300 text-xs flex items-center justify-between">
+          <span>Spam & Toxic</span>
+          <i data-lucide="shield-alert" class="w-3.5 h-3.5 text-rose-400"></i>
+        </span>
+        <div id="metricSpam" class="text-2xl font-bold text-rose-200 mt-1">0</div>
+        <span class="text-[11px] text-slate-500">Auto-neutralized</span>
+      </div>
+
+      <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-3.5">
+        <span class="text-emerald-300 text-xs flex items-center justify-between">
+          <span>Est. Time Saved</span>
+          <i data-lucide="clock" class="w-3.5 h-3.5 text-emerald-400"></i>
+        </span>
+        <div id="metricTimeSaved" class="text-2xl font-bold text-emerald-100 mt-1">0m</div>
+        <span class="text-[11px] text-slate-500">Creator efficiency</span>
+      </div>
+    </section>
+
+    <!-- Interactive Tabs & Search Toolbar -->
+    <section class="space-y-4">
+      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-slate-800 pb-3">
+        <!-- Category Filter Tabs -->
+        <div class="flex flex-wrap gap-1 text-xs font-medium" id="categoryTabs">
+          <button onclick="setCategoryFilter('all')" data-cat="all" class="cat-tab active px-3 py-1.5 rounded-lg bg-purple-600 text-white">
+            All (<span id="count-all">0</span>)
+          </button>
+          <button onclick="setCategoryFilter('needs_reply')" data-cat="needs_reply" class="cat-tab px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800">
+            🔥 Needs Reply (<span id="count-needs_reply">0</span>)
+          </button>
+          <button onclick="setCategoryFilter('question')" data-cat="question" class="cat-tab px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800">
+            ❓ Questions (<span id="count-question">0</span>)
+          </button>
+          <button onclick="setCategoryFilter('sponsor_pitch')" data-cat="sponsor_pitch" class="cat-tab px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800">
+            💼 Sponsor Pitches (<span id="count-sponsor_pitch">0</span>)
+          </button>
+          <button onclick="setCategoryFilter('positive')" data-cat="positive" class="cat-tab px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800">
+            🙌 Positive (<span id="count-positive">0</span>)
+          </button>
+          <button onclick="setCategoryFilter('negative')" data-cat="negative" class="cat-tab px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800">
+            📉 Feedback (<span id="count-negative">0</span>)
+          </button>
+          <button onclick="setCategoryFilter('spam_toxic')" data-cat="spam_toxic" class="cat-tab px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800">
+            🛡️ Spam & Toxic (<span id="count-spam_toxic">0</span>)
+          </button>
+        </div>
+
+        <!-- Search & Sort Controls -->
+        <div class="flex items-center space-x-2 w-full md:w-auto">
+          <div class="relative flex-1 md:w-60">
+            <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
+            <input
+              type="text"
+              id="commentSearch"
+              oninput="renderFilteredComments()"
+              placeholder="Search author or text..."
+              class="w-full pl-9 pr-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500"
+            />
+          </div>
+
+          <select id="sortBy" onchange="renderFilteredComments()" class="bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-purple-500">
+            <option value="priority">Priority: High to Low</option>
+            <option value="likes">Most Liked</option>
+            <option value="newest">Newest First</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Comments List Feed Container -->
+      <div id="commentsFeed" class="space-y-3 min-h-[300px]">
+        <!-- Empty State Default -->
+        <div class="py-16 text-center text-slate-500 border border-dashed border-slate-800/80 rounded-2xl">
+          <i data-lucide="inbox" class="w-10 h-10 mx-auto stroke-1 text-slate-600 mb-3"></i>
+          <p class="text-sm font-medium text-slate-300">No comments analyzed yet</p>
+          <p class="text-xs text-slate-500 mt-1">Click "Analyze & Triage" above or select one of the quick demo presets.</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Creator Voice & API Settings Modal -->
+  <div id="settingsModal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-xl shadow-2xl p-6 space-y-5 overflow-y-auto max-h-[90vh]">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center space-x-2">
+          <i data-lucide="sliders" class="w-5 h-5 text-purple-400"></i>
+          <h3 class="text-base font-bold text-white">Creator Voice & API Keys</h3>
+        </div>
+        <button onclick="closeSettingsModal()" class="text-slate-500 hover:text-slate-300">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Style Persona Selector -->
+      <div class="space-y-3">
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400">1. Creator Voice Persona</label>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+          <label class="border border-slate-800 hover:border-purple-500/50 p-3 rounded-xl cursor-pointer bg-slate-950 flex flex-col space-y-1">
+            <div class="flex items-center space-x-2">
+              <input type="radio" name="creatorStyleRadio" value="friendly_concise" checked class="text-purple-600 focus:ring-purple-500">
+              <span class="font-semibold text-white">Friendly & Concise</span>
+            </div>
+            <span class="text-[11px] text-slate-400">Warm, 1-2 sentences, humble, uses 1 emoji (🙌 / 🚀).</span>
+          </label>
+
+          <label class="border border-slate-800 hover:border-purple-500/50 p-3 rounded-xl cursor-pointer bg-slate-950 flex flex-col space-y-1">
+            <div class="flex items-center space-x-2">
+              <input type="radio" name="creatorStyleRadio" value="energetic_emojis" class="text-purple-600 focus:ring-purple-500">
+              <span class="font-semibold text-white">High Energy Hype</span>
+            </div>
+            <span class="text-[11px] text-slate-400">Celebratory, enthusiastic, community builder (🔥, 💯, 🤝).</span>
+          </label>
+
+          <label class="border border-slate-800 hover:border-purple-500/50 p-3 rounded-xl cursor-pointer bg-slate-950 flex flex-col space-y-1">
+            <div class="flex items-center space-x-2">
+              <input type="radio" name="creatorStyleRadio" value="deep_tech" class="text-purple-600 focus:ring-purple-500">
+              <span class="font-semibold text-white">Deep Tech Expert</span>
+            </div>
+            <span class="text-[11px] text-slate-400">Direct, architectural details, concise, code-oriented.</span>
+          </label>
+
+          <label class="border border-slate-800 hover:border-purple-500/50 p-3 rounded-xl cursor-pointer bg-slate-950 flex flex-col space-y-1">
+            <div class="flex items-center space-x-2">
+              <input type="radio" name="creatorStyleRadio" value="business_exec" class="text-purple-600 focus:ring-purple-500">
+              <span class="font-semibold text-white">Business Executive</span>
+            </div>
+            <span class="text-[11px] text-slate-400">Polite, directs business leads to email, formal.</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Few-Shot Reference Examples -->
+      <div class="space-y-1.5">
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+          2. Past Reply Style Reference (Few-Shot Prompting)
+        </label>
+        <p class="text-[11px] text-slate-400">Seed the drafter with 1-2 examples of how YOU typically reply:</p>
+        <textarea
+          id="pastRepliesInput"
+          rows="2"
+          class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-purple-500"
+          placeholder="Example: 'Great catch! Pushed a quick fix to Github main branch. Thanks for watching! 🙌'"
+        ></textarea>
+      </div>
+
+      <!-- API Keys Configuration (Optional) -->
+      <div class="space-y-2.5 border-t border-slate-800 pt-4">
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+          3. API Credentials (Optional)
+        </label>
+        <p class="text-[11px] text-slate-500">If left empty, built-in demo fixtures and local classification will run with 100% reliability.</p>
+        
+        <div class="space-y-2">
+          <div>
+            <label class="block text-[11px] text-slate-400 mb-1">YouTube Data API v3 Key</label>
+            <input type="password" id="ytApiKeyInput" placeholder="AIzaSy..." class="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 font-mono focus:outline-none focus:border-purple-500">
+          </div>
+          <div>
+            <label class="block text-[11px] text-slate-400 mb-1">LLM API Key (OpenAI or Claude)</label>
+            <input type="password" id="llmApiKeyInput" placeholder="sk-..." class="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 font-mono focus:outline-none focus:border-purple-500">
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer Buttons -->
+      <div class="flex items-center justify-end space-x-2 pt-2 border-t border-slate-800">
+        <button onclick="closeSettingsModal()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 transition">
+          Close
+        </button>
+        <button onclick="saveSettings()" class="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-xs font-semibold text-white transition shadow-sm">
+          Save Settings
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 hidden bg-slate-900 border border-slate-700 text-white text-xs px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-2">
+    <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
+    <span id="toastMessage">Action completed!</span>
+  </div>
+
+  <!-- App Script -->
+  <script src="/static/app.js?v=2"></script>
+</body>
+</html>
