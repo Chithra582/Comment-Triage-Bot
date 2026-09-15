@@ -1,0 +1,14 @@
+name: youtube-api
+description: "Fetches YouTube video metadata and top-level comment threads using the YouTube Data API v3."
+input_schema:
+  type: object
+  properties:
+    video_id:
+      type: string
+      description: "The 11-character YouTube video ID or full video URL."
+    max_comments:
+      type: integer
+      description: "Maximum number of comments to retrieve (default: 50)."
+      default: 50
+  required:
+    - video_id

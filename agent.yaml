@@ -1,0 +1,37 @@
+spec_version: "0.1.0"
+name: "comment-triage-bot"
+version: "1.0.0"
+description: "Automated YouTube comment management, classification, and style-matched reply drafting agent."
+author: "Chithra582"
+license: "MIT"
+
+model:
+  preferred: "gpt-4o-mini"
+  fallback:
+    - "claude-3-5-haiku-20241022"
+  constraints:
+    temperature: 0.2
+    max_tokens: 2000
+
+runtime:
+  temperature: 0.2
+  timeout: 60
+
+skills:
+  - "comment-triage"
+  - "response-drafting"
+
+tools:
+  - "youtube-api"
+
+tags:
+  - "customer-support"
+  - "marketing-and-sales"
+  - "youtube"
+  - "content-creator"
+  - "comment-moderation"
+
+metadata:
+  framework: "fastapi"
+  domain: "customer-support"
+  category: "Customer support"
